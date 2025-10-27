@@ -1,0 +1,44 @@
+﻿<h3>RegistroIndex</h3>
+
+<div class="row mb-3">
+	<div class="col-md-3">
+		<label class="form-label fw-bold">Desde:</label>
+		<InputDate @bind-Value="FechaDesde" class="form-control" />
+	</div>
+	<div class="col-md-3">
+		<label class="form-label fw-bold">Hasta:</label>
+		<InputDate @bind-Value="FechaHasta" class="form-control" />
+	</div>
+
+@code {
+	public DateTime? FechaDesde { get; set; }
+	public DateTime? FechaHasta { get; set; }
+
+	private async Task Cargar()
+	{
+		var lista = await HService.Listar(e => true);
+
+		if (!string.IsNullOrWhiteSpace(ValorFiltro))
+		{
+			if (Filtro == "IdEntrada" && int.TryParse(ValorFiltro, out int Id))
+			{
+				lista = lista.Where(e => e.IdEntrada == Id).ToList();
+			}
+			else if (Filtro == "Nombre")
+			{
+				lista = lista.Where(e => e.Nombre != null &&
+				e.Nombre.Contains(ValorFiltro, StringComparison.OrdinalIgnoreCase)).ToList();
+			}
+		}
+		if (FechaDesde.HasValue)
+		{
+			lista = lista.Where(p => p.Fecha >= FechaDesde.Value).ToList();
+		}
+		if (FechaHasta.HasValue)
+		{
+			lista = lista.Where(p => p.Fecha <= FechaHasta.Value).ToList();
+		}
+
+		Lista = lista;
+	}
+}
