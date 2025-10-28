@@ -1,5 +1,151 @@
-﻿<h3>RegistroCreate</h3>
+﻿@page "/Registro/Create"
+@using P2_AP1_FelixMunoz1.Models
+@using System.Linq
+@using P2_AP1_FelixMunoz1.Service
+@inject RegistroService RegistroService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
-@code {
+<PageTitle>Control de</PageTitle>
 
-}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white text-center">
+            <h5 class="mb-0">Agregar nuevo </h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="---" OnValidSubmit="Guardar">
+                <DataAnnotationsValidator />
+
+                @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ErrorMessage
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label for="Fecha" class="form-label fw-bold">Fecha:</label>
+                    <InputDate id="Fecha" class="form-control" @bind-Value="Registro.Fecha" />
+                    <ValidationMessage For="() => Registro.Fecha" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="Nombre" class="form-label fw-bold">Nombre del Cliente:</label>
+                    <InputText id="nombre" class="form-control" @bind-Value="Registro.NombreCliente" />
+                    <ValidationMessage For="() => Registro.NombreCliente" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="Cantidad" class="form-label fw-bold">Cantidad Total:</label>
+                    <InputNumber id="Cantidad" class="form-control" @bind-Value="Registro.Cantidad" TValue="double" />
+                    <ValidationMessage For="() => Registro.Cantidad" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="Precio" class="form-label fw-bold">Precio Total:</label>
+                    <InputNumber id="Precio" class="form-control" @bind-Value="Registro.Precio" TValue="decimal" />
+                    <ValidationMessage For="() => Registro.Precio" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="Importe" class="form-label fw-bold">Importe Total:</label>
+                    <input type="text" id="Importe" class="form-control" value="@Registro.Importe.ToString("C2")" readonly />
+                </div>
+            </EditForm>
+        </div>
+
+        <div class="mb-3 border p-3 border-success">
+            <h6 class="fw-bold">Agregar Detalle</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="TipoRegistro" class="form-label">Tipo de Registro:</label>
+                    <InputSelect id="TipoRegistro" class="form-control" @bind-Value="DetalleOriginal.IdTipo">
+                        <option value="0">Seleccione un tipo</option>
+                        @if (ListaTiposRegistros != null)
+                        {
+                            @foreach (var tipo in ListaTiposRegistros)
+                            {
+                                var agregada = Registro.Detalles    
+                                .Where(d => d.IdTipo == tipo.IdTipo)
+                                .Sum(d => d.Cantidad);
+                                var restante = tipo.Existencia - agregada;
+
+                                @if (restante > 0)
+                                {
+                                    <option value="@tipo.IdTipo">@tipo.Descripcion (Disponibles: @restante)</option>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <option value="0">Cargando tipos...</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label for="CantidadDetalle" class="form-label">Cantidad:</label>
+                    <InputNumber id="CantidadDetalle" class="form-control" @bind-Value="DetalleOriginal.Cantidad" />
+                    @if (IsNegativeQuantity)
+                    {
+                        <div class="text-danger small">La cantidad no puede ser negativa.</div>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <label for="PrecioDetalle" class="form-label">Precio:</label>
+                    <InputNumber id="PrecioDetalle" class="form-control" @bind-Value="DetalleOriginal.Precio" />
+                    @if (IsNegativePrice)
+                    {
+                        <div class="text-danger small">El precio no puede ser negativo.</div>
+                    }
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-success w-100" @onclick="AgregarDetalle">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (Huacales?.EntradasHuacalesDetalles?.Any() ?? false)
+        {
+            <div class="mb-3">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tipo de Huacal</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Importe</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var detalle in Huacales.EntradasHuacalesDetalles)
+                        {
+                            <tr>
+                                <td>@(ListaTiposRegistros?.FirstOrDefault(t => t.IdTipo == detalle.IdTipo)?.Descripcion ?? "Desconocido")</td>
+                                <td>@detalle.Cantidad</td>
+                                <td>@detalle.Precio.ToString("C2")</td>
+                                <td>@((detalle.Cantidad * detalle.Precio).ToString("C2"))</td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoverDetalle(detalle)">
+                                        <i class="bi bi-trash"></i> Remover
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <div class="card-footer bg-white d-flex justify-content-end gap-2">
+            <button type="submit" class="btn btn-primary" @onclick="GuardarM">
+                <i class="bi bi-save me-1"></i> Guardar
+            </button>
+            <a href="/Huacales/Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left-circle me-1"></i> Cancelar
+            </a>
+        </div>
+    </div>
+</div>
