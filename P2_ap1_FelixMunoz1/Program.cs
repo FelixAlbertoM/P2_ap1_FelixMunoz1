@@ -1,10 +1,15 @@
 using P2_ap1_FelixMunoz1.Components;
+using P2_ap1_FelixMunoz1.DAL;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+var connectionString = builder.Configuration.GetConnectionString("SqlConStr");
+
+builder.Services.AddDbContextFactory<Contexto>(o => o.UseSqlite(connectionString));
 
 var app = builder.Build();
 
